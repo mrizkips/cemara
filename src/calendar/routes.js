@@ -7,9 +7,7 @@ const routes = [{
 }, {
     method: 'GET',
     path: '/calendar/events',
-    handler: (request, h) => {
-        return 'test'
-    }
+    options: handler.events
 }]
 
 module.exports = routes
