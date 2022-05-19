@@ -1,61 +1,91 @@
 const { google } = require('googleapis')
 const key = require('./../../key.json')
 
-const oauth2Client = new google.auth.OAuth2(
-    key.web.client_id,
-    key.web.client_secret,
-    key.web.redirect_uris[0]
-)
+const setCalendar = (token) => {
+    const oauth2Client = new google.auth.OAuth2(
+        key.web.client_id,
+        key.web.client_secret,
+        key.web.redirect_uris[0]
+    )
+
+    oauth2Client.setCredentials({
+        access_token: token
+    })
+
+    const calendar = google.calendar({
+        version: 'v3',
+        auth: oauth2Client
+    })
+
+    return calendar
+}
 
 const handler = {
     calendar: {
-        auth: 'session',
-        handler: async (request, h) => {
-            oauth2Client.setCredentials({
-                access_token: request.auth.credentials.token,
-                refresh_token: request.auth.credentials.refresh_token
-            })
+        get: {
+            handler: async (request, h, err) => {
+                const token = request.query.token
+                const calendar = setCalendar(token)
 
-            const calendar = google.calendar({
-                version: 'v3',
-                auth: oauth2Client
-            })
+                const res = await calendar.calendars.get({
+                    calendarId: request.params.id ?? 'primary'
+                })
 
-            const res = await calendar.calendars.get({
-                calendarId: 'primary'
-            })
+                if (err) {
+                    throw new Error(err)
+                }
 
-            return h.response({
-                status: 'success',
-                message: 'Berhasil mengambil data calendar.',
-                items: res.data
-            })
+                return h.response({
+                    status: 'success',
+                    message: 'Berhasil mengambil data calendar.',
+                    items: res.data
+                })
+            }
+        },
+        insert: {
+            auth: 'session',
+            handler: async (request, h, err) => {
+                const calendar = setCalendar(request.auth.credentials)
+                const payload = request.payload
+
+                const res = calendar.calendars.insert({
+                    summary: payload.summary
+                })
+
+                if (err) {
+                    throw new Error(err)
+                }
+
+                return h.response({
+                    status: 'success',
+                    message: 'Berhasil menambahkan calendar.',
+                    items: res.data
+                })
+            }
         }
     },
-    events: {
-        auth: 'session',
-        handler: async (request, h) => {
-            oauth2Client.setCredentials({
-                access_token: request.auth.credentials.token,
-                refresh_token: request.auth.credentials.refresh_token
-            })
+    event: {
+        list: {
+            auth: 'session',
+            handler: async (request, h, err) => {
+                const calendar = setCalendar(request.auth.credentials)
 
-            const calendar = google.calendar({
-                version: 'v3',
-                auth: oauth2Client
-            })
+                const res = await calendar.events.list({
+                    calendarId: request.params.id ?? 'primary',
+                    timeMin: (new Date()).toISOString(),
+                    maxResults: 5
+                })
 
-            const res = await calendar.events.list({
-                calendarId: 'primary',
-                timeMin: (new Date()).toISOString(),
-                maxResults: 5
-            })
+                if (err) {
+                    throw new Error(err)
+                }
 
-            return h.response({
-                status: 'success',
-                message: 'Berhasil mengambil data events.',
-                data: res.data
-            })
+                return h.response({
+                    status: 'success',
+                    message: 'Berhasil mengambil data events.',
+                    data: res.data
+                })
+            }
         }
     }
 }

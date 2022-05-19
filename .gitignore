@@ -105,3 +105,4 @@ dist
 
 # Credentials
 key.json
+serviceAccountKey.json

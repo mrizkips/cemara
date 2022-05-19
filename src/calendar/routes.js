@@ -2,12 +2,12 @@ const handler = require('./handler')
 
 const routes = [{
     method: 'GET',
-    path: '/calendar',
-    options: handler.calendar
+    path: '/calendar/{id?}',
+    options: handler.calendar.get
 }, {
     method: 'GET',
-    path: '/calendar/events',
-    options: handler.events
+    path: '/calendar/event/{id?}',
+    options: handler.event.list
 }]
 
 module.exports = routes

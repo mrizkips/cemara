@@ -1,10 +1,16 @@
 const Hapi = require('@hapi/hapi')
 const routes = require('./routes')
+const admin = require('firebase-admin')
+const serviceAccount = require('./../serviceAccountKey.json')
 
 const init = async () => {
     const server = Hapi.server({
         port: process.env.PORT,
         host: process.env.HOSTNAME
+    })
+
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
     })
 
     await server.register([
