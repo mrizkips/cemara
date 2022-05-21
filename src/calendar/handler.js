@@ -1,7 +1,16 @@
 const { google } = require('googleapis')
 const key = require('./../../key.json')
 
-const setCalendar = (token) => {
+const setCalendar = (request, h) => {
+    const { token, refreshToken } = request.query
+
+    if (typeof token === 'undefined' && typeof refreshToken === 'undefined') {
+        return h.response({
+            status: 'fail',
+            message: 'Access token tidak boleh kosong.'
+        }).code(400)
+    }
+
     const oauth2Client = new google.auth.OAuth2(
         key.web.client_id,
         key.web.client_secret,
@@ -9,7 +18,8 @@ const setCalendar = (token) => {
     )
 
     oauth2Client.setCredentials({
-        access_token: token
+        access_token: token,
+        refresh_token: refreshToken
     })
 
     const calendar = google.calendar({
@@ -23,9 +33,12 @@ const setCalendar = (token) => {
 const handler = {
     calendar: {
         get: {
+            pre: [
+                { method: setCalendar, assign: 'calendarClient' }
+            ],
             handler: async (request, h, err) => {
-                const token = request.query.token
-                const calendar = setCalendar(token)
+                const calendar = request.pre.calendarClient
+                console.log(calendar)
 
                 const res = await calendar.calendars.get({
                     calendarId: request.params.id ?? 'primary'
@@ -39,17 +52,21 @@ const handler = {
                     status: 'success',
                     message: 'Berhasil mengambil data calendar.',
                     items: res.data
-                })
+                }).code(200)
             }
         },
         insert: {
-            auth: 'session',
+            pre: [
+                { method: setCalendar, assign: 'calendarClient' }
+            ],
             handler: async (request, h, err) => {
-                const calendar = setCalendar(request.auth.credentials)
+                const calendar = request.pre.calendarClient
                 const payload = request.payload
 
-                const res = calendar.calendars.insert({
-                    summary: payload.summary
+                const res = await calendar.calendars.insert({
+                    requestBody: {
+                        summary: payload.summary
+                    }
                 })
 
                 if (err) {
@@ -66,9 +83,11 @@ const handler = {
     },
     event: {
         list: {
-            auth: 'session',
+            pre: [
+                { method: setCalendar, assign: 'calendarClient' }
+            ],
             handler: async (request, h, err) => {
-                const calendar = setCalendar(request.auth.credentials)
+                const calendar = request.pre.calendarClient
 
                 const res = await calendar.events.list({
                     calendarId: request.params.id ?? 'primary',
