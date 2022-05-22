@@ -1,5 +1,6 @@
 const { google } = require('googleapis')
 const key = require('./../../key.json')
+const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore')
 
 const setCalendar = (request, h) => {
     const { token, refreshToken } = request.query
@@ -7,7 +8,7 @@ const setCalendar = (request, h) => {
     if (typeof token === 'undefined' && typeof refreshToken === 'undefined') {
         return h.response({
             status: 'fail',
-            message: 'Access token tidak boleh kosong.'
+            message: 'Access token atau refreshToken tidak boleh kosong.'
         }).code(400)
     }
 
@@ -30,6 +31,17 @@ const setCalendar = (request, h) => {
     return calendar
 }
 
+const generateToken = (length) => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length))
+    }
+
+    return result
+}
+
 const handler = {
     calendar: {
         get: {
@@ -38,10 +50,9 @@ const handler = {
             ],
             handler: async (request, h, err) => {
                 const calendar = request.pre.calendarClient
-                console.log(calendar)
 
                 const res = await calendar.calendars.get({
-                    calendarId: request.params.id ?? 'primary'
+                    calendarId: request.query.calendarId ?? 'primary'
                 })
 
                 if (err) {
@@ -51,7 +62,7 @@ const handler = {
                 return h.response({
                     status: 'success',
                     message: 'Berhasil mengambil data calendar.',
-                    items: res.data
+                    data: res.data
                 }).code(200)
             }
         },
@@ -63,11 +74,24 @@ const handler = {
                 const calendar = request.pre.calendarClient
                 const payload = request.payload
 
-                const res = await calendar.calendars.insert({
+                const calendarRes = await calendar.calendars.insert({
                     requestBody: {
-                        summary: payload.summary
+                        summary: payload.summary,
+                        description: 'Dibuat menggunakan Cemara.'
                     }
                 })
+
+                const familyToken = generateToken(8)
+                const db = getFirestore()
+
+                const newFamily = db.collection('families').doc()
+                const dbRes = await newFamily.set({
+                    name: payload.summary,
+                    gcalendarId: calendarRes.data.id,
+                    token: familyToken
+                })
+
+                console.log(newFamily)
 
                 if (err) {
                     throw new Error(err)
@@ -76,7 +100,22 @@ const handler = {
                 return h.response({
                     status: 'success',
                     message: 'Berhasil menambahkan calendar.',
-                    items: res.data
+                    data: dbRes
+                })
+            }
+        },
+        delete: {
+            pre: [
+                { method: setCalendar, assign: 'calendarClient' }
+            ],
+            handler: async (request, h, err) => {
+                const calendar = request.pre.calendarClient
+                const payload = request.payload
+
+                const calendarRes = await calendar.calendars.delete({
+                    requestBody: {
+                        calendarId: payload.calendarId
+                    }
                 })
             }
         }
@@ -90,7 +129,7 @@ const handler = {
                 const calendar = request.pre.calendarClient
 
                 const res = await calendar.events.list({
-                    calendarId: request.params.id ?? 'primary',
+                    calendarId: request.query.calendarId ?? 'primary',
                     timeMin: (new Date()).toISOString(),
                     maxResults: 5
                 })
