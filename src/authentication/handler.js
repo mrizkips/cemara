@@ -24,6 +24,19 @@ const handler = {
             return response
         }
     },
+    login: {
+        handler: async function (request, h) {
+            const payload = request.payload
+
+            const response = h.response({
+                status: 'success',
+                message: 'Login berhasil.',
+                data: payload
+            }).code(200)
+
+            return response
+        }
+    },
     logout: {
         auth: 'session',
         handler: async (request, h) => {

@@ -1,16 +1,15 @@
-const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore')
+const { getFirestore } = require('firebase-admin/firestore')
 const { nanoid } = require('nanoid')
-const helper = require('./../helper')
+const { initCalendarApi, generateToken } = require('./../helper')
 
 const handler = {
     family: {
         insert: {
             pre: [
-                { method: helper.initCalendarApi, assign: 'calendar' }
+                { method: initCalendarApi, assign: 'calendar' }
             ],
             handler: async (request, h, err) => {
                 const calendar = request.pre.calendar
-                const user = request.pre.user
                 const payload = request.payload
 
                 const calendarRes = await calendar.calendars.insert({
@@ -20,9 +19,7 @@ const handler = {
                     }
                 })
 
-                console.log(calendarRes)
-
-                const familyToken = helper.generateToken(8)
+                const familyToken = generateToken(8)
                 const db = getFirestore()
 
                 const newFamily = await db.collection('families').add({
@@ -31,15 +28,6 @@ const handler = {
                     calendarId: calendarRes.data.id,
                     token: familyToken
                 })
-
-                // try {
-                //     await db.runTransaction(async (t) => {
-                //         const family = await t.get(newFamily)
-                //         console.log(family)
-                //     })
-                // } catch (e) {
-                //     console.log('Transaction failure: ', e)
-                // }
 
                 if (err) {
                     throw new Error(err)
@@ -54,10 +42,7 @@ const handler = {
         },
         delete: {
             pre: [
-                [
-                    { method: helper.initCalendarApi, assign: 'calendar' },
-                    { method: helper.userInfo, assign: 'user' }
-                ]
+                { method: initCalendarApi, assign: 'calendar' }
             ],
             handler: async (request, h, err) => {
                 const calendar = request.pre.calendar
@@ -91,6 +76,11 @@ const handler = {
                     message: 'Data keluarga berhasil dihapus!'
                 }).code(200)
             }
+        }
+    },
+    member: {
+        insert: {
+
         }
     }
 }

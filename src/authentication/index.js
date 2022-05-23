@@ -23,6 +23,7 @@ exports.plugin = {
             providerParams: {
                 access_type: 'offline'
             },
+            scope: ['profile', 'email', 'https://www.googleapis.com/auth/calendar'],
             isSecure: process.env.NODE_ENV === 'production'
         })
 
