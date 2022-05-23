@@ -14,7 +14,8 @@ const init = async () => {
     })
 
     await server.register([
-        { plugin: require('./calendar') }
+        { plugin: require('./calendar') },
+        { plugin: require('./family') }
     ])
     server.route(routes)
 

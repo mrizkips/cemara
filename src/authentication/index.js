@@ -1,8 +1,7 @@
-const key = require('./../../key.json')
-
 exports.plugin = {
     name: 'authentication',
     version: '1.0.0',
+    once: true,
     register: async (server, options) => {
         await server.register(require('@hapi/cookie'))
         await server.register(require('@hapi/bell'))
@@ -17,13 +16,7 @@ exports.plugin = {
 
         server.auth.strategy('google', 'bell', {
             password: 'Bf038lxIwQ4ODJgOnrlAm2345AM9ifDy',
-            provider: {
-                name: 'google',
-                protocol: 'oauth2',
-                auth: key.web.auth_uri,
-                token: key.web.token_uri,
-                scope: ['https://www.googleapis.com/auth/calendar']
-            },
+            provider: 'google',
             location: server.info.uri,
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
