@@ -1,13 +1,19 @@
 const handler = require('./handler')
 
 const routes = [{
-    method: 'GET',
-    path: '/auth/google',
-    options: handler.google
-}, {
+    method: 'POST',
+    path: '/auth/login',
+    options: handler.login
+},
+{
     method: 'GET',
     path: '/auth/logout',
     options: handler.logout
+},
+{
+    method: 'GET',
+    path: '/auth/google',
+    options: handler.google
 }]
 
 module.exports = routes

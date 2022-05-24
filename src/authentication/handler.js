@@ -1,3 +1,8 @@
+const Joi = require('joi')
+const { google } = require('googleapis')
+const { initOAuth2 } = require('../helper')
+const admin = require('firebase-admin')
+
 const handler = {
     google: {
         auth: {
@@ -12,7 +17,7 @@ const handler = {
                 const response = h.response({
                     status: 'success',
                     message: 'Otentikasi berhasil menggunakan akun google.',
-                    credentials
+                    data: request.auth.credentials
                 }).code(200)
                 return response
             }
@@ -25,13 +30,24 @@ const handler = {
         }
     },
     login: {
+        auth: {
+            mode: 'try',
+            strategy: 'session'
+        },
+        validate: {
+            payload: Joi.object({
+                token: Joi.string().required(),
+                refreshToken: Joi.string().required()
+            })
+        },
         handler: async function (request, h) {
-            const payload = request.payload
+            const credentials = request.payload
+            request.cookieAuth.set(credentials)
 
             const response = h.response({
                 status: 'success',
                 message: 'Login berhasil.',
-                data: payload
+                data: request.auth
             }).code(200)
 
             return response

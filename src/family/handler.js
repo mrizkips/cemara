@@ -5,6 +5,7 @@ const { initCalendarApi, generateToken } = require('./../helper')
 const handler = {
     family: {
         insert: {
+            auth: 'session',
             pre: [
                 { method: initCalendarApi, assign: 'calendar' }
             ],
@@ -41,6 +42,7 @@ const handler = {
             }
         },
         delete: {
+            auth: 'session',
             pre: [
                 { method: initCalendarApi, assign: 'calendar' }
             ],

@@ -28,15 +28,7 @@ const initOAuth2 = (token, refreshToken) => {
 }
 
 const initCalendarApi = (request, h) => {
-    const { token, refreshToken } = request.query
-
-    if (typeof token === 'undefined' && typeof refreshToken === 'undefined') {
-        return h.response({
-            status: 'fail',
-            message: 'Access token atau refreshToken tidak boleh kosong.'
-        }).code(400)
-    }
-
+    const { token, refreshToken } = request.auth.credentials
     const oauth2Client = initOAuth2(token, refreshToken)
     const calendar = google.calendar({
         version: 'v3',
@@ -47,15 +39,7 @@ const initCalendarApi = (request, h) => {
 }
 
 const userInfo = (request, h) => {
-    const { token, refreshToken } = request.query
-
-    if (typeof token === 'undefined' && typeof refreshToken === 'undefined') {
-        return h.response({
-            status: 'fail',
-            message: 'Access token atau refreshToken tidak boleh kosong.'
-        }).code(400)
-    }
-
+    const { token, refreshToken } = request.auth.credentials
     const oauth2Client = initOAuth2(token, refreshToken)
     const oauth2 = google.oauth2({
         auth: oauth2Client,
@@ -65,4 +49,4 @@ const userInfo = (request, h) => {
     return oauth2.userinfo.get()
 }
 
-module.exports = { generateToken, initCalendarApi, userInfo }
+module.exports = { generateToken, initOAuth2, initCalendarApi, userInfo }

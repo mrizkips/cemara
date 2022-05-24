@@ -10,7 +10,8 @@ const init = async () => {
     })
 
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: 'https://cemaraapps-default-rtdb.firebaseio.com'
     })
 
     await server.register([

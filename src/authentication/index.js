@@ -11,6 +11,15 @@ exports.plugin = {
                 password: '4bfsAhccZeb146bE63bcAOUFGcuzLBix',
                 isSecure: process.env.NODE_ENV === 'production',
                 path: '/'
+            },
+            validateFunc: async (request, session) => {
+                const account = session
+
+                if (!account) {
+                    return { valid: false }
+                }
+
+                return { valid: true, credentials: account }
             }
         })
 
