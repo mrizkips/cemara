@@ -1,7 +1,8 @@
-const Joi = require('joi')
+const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth')
 const { google } = require('googleapis')
+const Joi = require('joi')
 const { initOAuth2 } = require('../helper')
-const admin = require('firebase-admin')
+const key = require('./../../key.json')
 
 const handler = {
     google: {
@@ -36,12 +37,20 @@ const handler = {
         },
         validate: {
             payload: Joi.object({
+                // idToken: Joi.string().required(),
                 token: Joi.string().required(),
                 refreshToken: Joi.string().required()
             })
         },
         handler: async function (request, h) {
-            const credentials = request.payload
+            const { idToken, token, refreshToken } = request.payload
+            const googleAuth = initOAuth2(idToken, token, refreshToken)
+            console.log(googleAuth)
+
+            const credentials = GoogleAuthProvider.credential(googleAuth.credentials.token)
+            console.log(credentials)
+            const res = await signInWithCredential(getAuth(), credentials)
+            console.log(res)
             request.cookieAuth.set(credentials)
 
             const response = h.response({
