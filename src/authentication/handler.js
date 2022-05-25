@@ -1,8 +1,5 @@
 const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth')
-const { google } = require('googleapis')
 const Joi = require('joi')
-const { initOAuth2 } = require('../helper')
-const key = require('./../../key.json')
 
 const handler = {
     google: {
@@ -13,12 +10,16 @@ const handler = {
         handler: async function (request, h) {
             if (request.auth.isAuthenticated) {
                 const credentials = request.auth.credentials
+                const token = GoogleAuthProvider.credential(request.auth.artifacts.id_token)
+                const res = await signInWithCredential(getAuth(), token)
+                credentials.user = res.user
+
                 request.cookieAuth.set(credentials)
 
                 const response = h.response({
                     status: 'success',
                     message: 'Otentikasi berhasil menggunakan akun google.',
-                    data: request.auth.credentials
+                    data: credentials
                 }).code(200)
                 return response
             }
@@ -37,26 +38,19 @@ const handler = {
         },
         validate: {
             payload: Joi.object({
-                // idToken: Joi.string().required(),
-                token: Joi.string().required(),
-                refreshToken: Joi.string().required()
+                idToken: Joi.string().required()
             })
         },
         handler: async function (request, h) {
-            const { idToken, token, refreshToken } = request.payload
-            const googleAuth = initOAuth2(idToken, token, refreshToken)
-            console.log(googleAuth)
-
-            const credentials = GoogleAuthProvider.credential(googleAuth.credentials.token)
-            console.log(credentials)
+            const { idToken } = request.payload
+            const credentials = GoogleAuthProvider.credential(idToken)
             const res = await signInWithCredential(getAuth(), credentials)
-            console.log(res)
-            request.cookieAuth.set(credentials)
+            request.cookieAuth.set(res.user)
 
             const response = h.response({
                 status: 'success',
                 message: 'Login berhasil.',
-                data: request.auth
+                data: res.user
             }).code(200)
 
             return response

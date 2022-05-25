@@ -23,7 +23,7 @@ const init = async () => {
     }
 
     const app = initializeApp(firebaseConfig)
-    const auth = getAuth(app)
+    getAuth(app)
 
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
