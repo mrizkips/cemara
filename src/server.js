@@ -8,7 +8,7 @@ const { getAuth } = require('firebase/auth')
 const init = async () => {
     const server = Hapi.server({
         port: process.env.PORT,
-        host: process.env.HOSTNAME
+        host: process.env.NODE_ENV !== 'production' ? process.env.LOCALHOST : process.env.PRODHOST
     })
 
     const firebaseConfig = {

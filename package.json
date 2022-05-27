@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "nodemon -r dotenv/config ./src/server.js",
+    "start-prod": "NODE_ENV=production node -r dotenv/config ./src/server.js",
     "lint": "eslint ./src"
   },
   "keywords": [],
