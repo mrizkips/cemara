@@ -1,5 +1,6 @@
 const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth')
 const Joi = require('joi')
+const { OAuth2Client } = require('google-auth-library')
 
 const handler = {
     google: {
@@ -14,12 +15,12 @@ const handler = {
                 const res = await signInWithCredential(getAuth(), token)
                 credentials.user = res.user
 
-                request.cookieAuth.set(credentials)
+                // request.cookieAuth.set(credentials)
 
                 const response = h.response({
                     status: 'success',
                     message: 'Otentikasi berhasil menggunakan akun google.',
-                    data: credentials
+                    data: request.auth
                 }).code(200)
                 return response
             }
@@ -38,19 +39,29 @@ const handler = {
         },
         validate: {
             payload: Joi.object({
-                idToken: Joi.string().required()
+                idToken: Joi.string().required(),
+                accessToken: Joi.string().required(),
+                refreshToken: Joi.string().required()
             })
         },
         handler: async function (request, h) {
-            const { idToken } = request.payload
-            const credentials = GoogleAuthProvider.credential(idToken)
-            const res = await signInWithCredential(getAuth(), credentials)
-            request.cookieAuth.set(res.user)
+            const { idToken, accessToken, refreshToken } = request.payload
+            const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+            async function verify () {
+                const ticket = await client.verifyIdToken({
+                    idToken,
+                    audience: process.env.GOOGLE_MOBILE_CLIENT_ID
+                })
+                const payload = ticket.getPayload()
+                console.log(payload)
+            }
+            verify().catch(console.error)
+            request.cookieAuth.set({ idToken, accessToken,refreshToken })
 
             const response = h.response({
                 status: 'success',
                 message: 'Login berhasil.',
-                data: res.user
+                data: request.auth.credentials
             }).code(200)
 
             return response
