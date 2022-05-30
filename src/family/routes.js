@@ -6,8 +6,13 @@ const routes = [{
     options: handler.family.insert
 },
 {
+    method: 'PUT',
+    path: '/family/{id}',
+    options: handler.family.update
+},
+{
     method: 'DELETE',
-    path: '/family',
+    path: '/family/{id}',
     options: handler.family.delete
 }]
 

@@ -1,6 +1,7 @@
 const { OAuth2Client } = require('google-auth-library')
 const { getFirestore } = require('firebase-admin/firestore')
 const Joi = require('joi')
+const { TokenValidationError, FirebaseError } = require('../errors')
 
 const handler = {
     google: {
@@ -10,13 +11,6 @@ const handler = {
         },
         handler: async function (request, h) {
             if (request.auth.isAuthenticated) {
-                // const credentials = request.auth.credentials
-                // const token = GoogleAuthProvider.credential(request.auth.artifacts.id_token)
-                // const res = await signInWithCredential(getAuth(), token)
-                // credentials.user = res.user
-
-                // request.cookieAuth.set(credentials)
-
                 const response = h.response({
                     status: 'success',
                     message: 'Otentikasi berhasil menggunakan akun google.',
@@ -52,6 +46,9 @@ const handler = {
                 const ticket = await client.verifyIdToken({
                     idToken,
                     audience: process.env.GOOGLE_CLIENT_ID
+                }).catch((error) => {
+                    console.log(error)
+                    throw new TokenValidationError('ID Token tidak sesuai / ID token sudah kadaluarsa.')
                 })
 
                 const payload = ticket.getPayload()
@@ -67,6 +64,9 @@ const handler = {
                     await userRef.set(data).then((res) => {
                         console.log('Added: ', res)
                         request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
+                    }).catch((error) => {
+                        console.log(error)
+                        throw new FirebaseError('Gagal untuk login.')
                     })
                 } else {
                     request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
@@ -84,7 +84,7 @@ const handler = {
                 const response = h.response({
                     statusCode: 400,
                     status: 'fail',
-                    message: 'ID Token tidak sesuai / ID token sudah kadaluarsa.'
+                    message: error.message
                 }).code(400)
 
                 return response
