@@ -1,6 +1,6 @@
-const { getAuth, GoogleAuthProvider, signInWithCredential } = require('firebase/auth')
-const Joi = require('joi')
 const { OAuth2Client } = require('google-auth-library')
+const { getFirestore } = require('firebase-admin/firestore')
+const Joi = require('joi')
 
 const handler = {
     google: {
@@ -10,10 +10,10 @@ const handler = {
         },
         handler: async function (request, h) {
             if (request.auth.isAuthenticated) {
-                const credentials = request.auth.credentials
-                const token = GoogleAuthProvider.credential(request.auth.artifacts.id_token)
-                const res = await signInWithCredential(getAuth(), token)
-                credentials.user = res.user
+                // const credentials = request.auth.credentials
+                // const token = GoogleAuthProvider.credential(request.auth.artifacts.id_token)
+                // const res = await signInWithCredential(getAuth(), token)
+                // credentials.user = res.user
 
                 // request.cookieAuth.set(credentials)
 
@@ -47,24 +47,48 @@ const handler = {
         handler: async function (request, h) {
             const { idToken, accessToken, refreshToken } = request.payload
             const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
-            async function verify () {
+
+            try {
                 const ticket = await client.verifyIdToken({
                     idToken,
-                    audience: process.env.GOOGLE_MOBILE_CLIENT_ID
+                    audience: process.env.GOOGLE_CLIENT_ID
                 })
+
                 const payload = ticket.getPayload()
-                console.log(payload)
+                const db = getFirestore()
+                const data = {
+                    email: payload.email,
+                    name: payload.name
+                }
+
+                const userRef = db.collection('users').doc(payload.sub)
+                const doc = await userRef.get()
+                if (!doc.exists) {
+                    await userRef.set(data).then((res) => {
+                        console.log('Added: ', res)
+                        request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
+                    })
+                } else {
+                    request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
+                }
+
+                const response = h.response({
+                    statusCode: 200,
+                    status: 'success',
+                    message: 'Login berhasil.',
+                    data: request.auth.credentials
+                }).code(200)
+
+                return response
+            } catch (error) {
+                const response = h.response({
+                    statusCode: 400,
+                    status: 'fail',
+                    message: 'ID Token tidak sesuai / ID token sudah kadaluarsa.'
+                }).code(400)
+
+                return response
             }
-            verify().catch(console.error)
-            request.cookieAuth.set({ idToken, accessToken,refreshToken })
-
-            const response = h.response({
-                status: 'success',
-                message: 'Login berhasil.',
-                data: request.auth.credentials
-            }).code(200)
-
-            return response
         }
     },
     logout: {
@@ -73,6 +97,7 @@ const handler = {
             request.cookieAuth.clear()
 
             const response = h.response({
+                statusCode: 200,
                 status: 'success',
                 message: 'Berhasil logout'
             }).code(200)

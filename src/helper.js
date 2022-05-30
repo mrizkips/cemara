@@ -12,7 +12,7 @@ const generateToken = (length) => {
     return result
 }
 
-const initOAuth2 = (token, refreshToken) => {
+const initOAuth2 = (accessToken, refreshToken) => {
     const oauth2Client = new google.auth.OAuth2(
         key.web.client_id,
         key.web.client_secret,
@@ -20,7 +20,7 @@ const initOAuth2 = (token, refreshToken) => {
     )
 
     oauth2Client.setCredentials({
-        access_token: token,
+        access_token: accessToken,
         refresh_token: refreshToken
     })
 
@@ -38,4 +38,14 @@ const initCalendarApi = (request, h) => {
     return calendar
 }
 
-module.exports = { generateToken, initOAuth2, initCalendarApi }
+const userInfo = (request, h) => {
+    const { accessToken, refreshToken } = request.auth.credentials
+    const oauth2Client = initOAuth2(accessToken, refreshToken)
+    const oauth2 = google.oauth2({
+        auth: oauth2Client,
+        version: 'v2'
+    })
+    return oauth2.userinfo.get()
+}
+
+module.exports = { generateToken, initOAuth2, initCalendarApi, userInfo }
