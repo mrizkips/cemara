@@ -1,4 +1,4 @@
-const { getFirestore } = require('firebase-admin/firestore')
+const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { nanoid } = require('nanoid')
 const { FirebaseError, CalendarError } = require('../errors')
 const { initCalendarApi, generateToken } = require('./../helper')
@@ -37,28 +37,18 @@ const handler = {
 
                 const familyRef = db.collection('families').doc(id)
                 const userRef = db.collection('users').doc(userId)
-                const user = await userRef.get()
 
                 try {
                     await db.runTransaction(async (t) => {
                         t.set(familyRef, {
-                            id,
                             name,
                             calendarId: calendarRes.data.id,
                             token: familyToken
                         })
 
-                        if (!user.exists) {
-                            return h.response({
-                                statusCode: 404,
-                                status: 'fail',
-                                message: 'User tidak ditemukan.'
-                            }).code(404)
-                        } else {
-                            t.update(userRef, {
-                                calendarId: calendarRes.data.id
-                            })
-                        }
+                        t.update(userRef, {
+                            familyId: familyRef.id
+                        })
                     })
 
                     return h.response({
@@ -76,16 +66,16 @@ const handler = {
 
                     if (error instanceof CalendarError) {
                         return h.response({
-                            statusCode: '400',
+                            statusCode: '500',
                             status: 'fail',
                             message: `Google Calendar Error: ${error.message}`
-                        }).code(400)
+                        }).code(500)
                     } else {
                         return h.response({
-                            statusCode: '400',
+                            statusCode: '500',
                             status: 'fail',
                             message: error.message
-                        }).code(400)
+                        }).code(500)
                     }
                 }
             }
@@ -96,9 +86,6 @@ const handler = {
                 { method: initCalendarApi, assign: 'calendar' }
             ],
             validate: {
-                params: Joi.object({
-                    id: Joi.required()
-                }),
                 payload: Joi.object({
                     name: Joi.string().required()
                 })
@@ -148,36 +135,64 @@ const handler = {
                 } catch (error) {
                     if (error instanceof FirebaseError) {
                         return h.response({
-                            statusCode: 400,
+                            statusCode: 500,
                             status: 'fail',
                             message: `Firebase Error: ${error.message}`
-                        }).code(400)
+                        }).code(500)
                     } else if (error instanceof CalendarError) {
                         return h.response({
-                            statusCode: 400,
+                            statusCode: 500,
                             status: 'fail',
                             message: `Google Calendar Error: ${error.message}`
-                        }).code(400)
+                        }).code(500)
                     } else {
                         return h.response({
-                            statusCode: 400,
+                            statusCode: 500,
                             status: 'fail',
                             message: error.message
-                        }).code(400)
+                        }).code(500)
                     }
                 }
             }
         },
         get: {
             auth: 'session',
-            pre: [
-                { method: initCalendarApi, assign: 'calendar' }
-            ],
-            validate: {
-                params: Joi.object({
-                    id: Joi.string().required()
+            handler: async (request, h) => {
+                const userId = request.auth.credentials.userId
+                const db = getFirestore()
+
+                const userRef = db.collection('users').doc(userId)
+                const user = await userRef.get()
+
+                if (typeof user.data().familyId === 'undefined') {
+                    return h.response({
+                        statusCode: 404,
+                        status: 'fail',
+                        message: 'User tidak memiliki data keluarga.'
+                    }).code(404)
+                }
+
+                const familyRef = db.collection('families').doc(user.data().familyId)
+                const family = await familyRef.get()
+
+                if (!family.exists) {
+                    return h.response({
+                        statusCode: 404,
+                        status: 'fail',
+                        message: 'Data keluarga tidak ditemukan.'
+                    }).code(404)
+                }
+
+                const data = family.data()
+                data.id = family.id
+
+                return h.response({
+                    statusCode: 200,
+                    status: 'success',
+                    message: 'Data keluarga ditemukan.',
+                    data
                 })
-            },
+            }
         },
         delete: {
             auth: 'session',
@@ -192,10 +207,22 @@ const handler = {
             handler: async (request, h) => {
                 const calendar = request.pre.calendar
                 const id = request.params.id
+                const userId = request.auth.credentials.userId
                 const db = getFirestore()
 
                 const familyRef = db.collection('families').doc(id)
                 const family = await familyRef.get()
+
+                const userRef = db.collection('users').doc(userId)
+                const user = await userRef.get()
+
+                if (user.data().familyId !== id) {
+                    return h.response({
+                        statusCode: 403,
+                        status: 'fail',
+                        message: 'Tidak memiliki otoritas untuk melakukan aksi ini.'
+                    }).code(403)
+                }
 
                 if (!family.exists) {
                     return h.response({
@@ -207,7 +234,7 @@ const handler = {
 
                 try {
                     await calendar.calendars.delete({
-                        calendarId: id
+                        calendarId: family.data().calendarId
                     }).catch((error) => {
                         console.log(error)
                         throw new CalendarError('gagal menghapus data.')
@@ -218,6 +245,13 @@ const handler = {
                         throw new FirebaseError('gagal menghapus data keluarga.')
                     })
 
+                    await userRef.update({
+                        familyId: FieldValue.delete()
+                    }).catch((error) => {
+                        console.log(error)
+                        throw new FirebaseError('gagal menghapus isian familyId di dokumen users.')
+                    })
+
                     return h.response({
                         status: 'success',
                         message: 'Data keluarga berhasil dihapus!'
@@ -225,22 +259,94 @@ const handler = {
                 } catch (error) {
                     if (error instanceof FirebaseError) {
                         return h.response({
-                            statusCode: 400,
+                            statusCode: 500,
                             status: 'fail',
                             message: `Firebase Error: ${error.message}`
-                        }).code(400)
+                        }).code(500)
                     } else if (error instanceof CalendarError) {
                         return h.response({
-                            statusCode: 400,
+                            statusCode: 500,
                             status: 'fail',
                             message: `Google Calendar Error: ${error.message}`
-                        }).code(400)
+                        }).code(500)
                     } else {
                         return h.response({
-                            statusCode: 400,
+                            statusCode: 500,
                             status: 'fail',
                             message: error.message
-                        }).code(400)
+                        }).code(500)
+                    }
+                }
+            }
+        },
+        token: {
+            auth: 'session',
+            pre: [
+                { method: initCalendarApi, assign: 'calendar' }
+            ],
+            validate: {
+                payload: Joi.object({
+                    token: Joi.string().min(8).max(8).required()
+                }),
+                failAction: (request, h, error) => {
+                    return error.isJoi ? h.response(error.output).takeover() : h.response(error).takeover()
+                }
+            },
+            handler: async (request, h) => {
+                const calendar = request.pre.calendar
+                const { userId } = request.auth.credentials
+                const { token } = request.payload
+                const db = getFirestore()
+
+                const familyRef = db.collection('families')
+                const snapshot = await familyRef.where('token', '==', token).get()
+
+                if (snapshot.empty) {
+                    return h.response({
+                        statusCode: 404,
+                        status: 'fail',
+                        message: 'Token tidak ditemukan.'
+                    }).code(404)
+                }
+
+                const userRef = db.collection('users').doc(userId)
+
+                try {
+                    snapshot.forEach(family => {
+                        userRef.update({
+                            familyId: family.id
+                        }).catch((error) => {
+                            console.log(error)
+                            throw new FirebaseError('gagal menambahkan familyId.')
+                        })
+
+                        calendar.acl.insert({
+                            calendarId: family.calendarId,
+                            sendNotifications: false,
+                            requestBody: {
+                                
+                            }
+                        })
+                    })
+                } catch (error) {
+                    if (error instanceof FirebaseError) {
+                        return h.response({
+                            statusCode: 500,
+                            status: 'fail',
+                            message: `Firebase Error: ${error.message}`
+                        }).code(500)
+                    } else if (error instanceof CalendarError) {
+                        return h.response({
+                            statusCode: 500,
+                            status: 'fail',
+                            message: `Google Calendar Error: ${error.message}`
+                        }).code(500)
+                    } else {
+                        return h.response({
+                            statusCode: 500,
+                            status: 'fail',
+                            message: error.message
+                        }).code(500)
                     }
                 }
             }

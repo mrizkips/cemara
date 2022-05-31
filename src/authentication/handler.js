@@ -12,6 +12,7 @@ const handler = {
         handler: async function (request, h) {
             if (request.auth.isAuthenticated) {
                 const response = h.response({
+                    statusCode: '200',
                     status: 'success',
                     message: 'Otentikasi berhasil menggunakan akun google.',
                     data: request.auth
@@ -20,9 +21,10 @@ const handler = {
             }
 
             const response = h.response({
+                statusCode: '500',
                 status: 'fail',
                 message: 'Otentikasi gagal. Silakan coba lagi.'
-            }).code(400)
+            }).code(500)
             return response
         }
     },
@@ -66,7 +68,7 @@ const handler = {
                         request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
                     }).catch((error) => {
                         console.log(error)
-                        throw new FirebaseError('Gagal untuk login.')
+                        throw new FirebaseError('gagal menambahkan user.')
                     })
                 } else {
                     request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
@@ -81,13 +83,19 @@ const handler = {
 
                 return response
             } catch (error) {
-                const response = h.response({
-                    statusCode: 400,
-                    status: 'fail',
-                    message: error.message
-                }).code(400)
-
-                return response
+                if (error instanceof FirebaseError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Firebase error: ${error.message}`
+                    }).code(500)
+                } else if (error instanceof TokenValidationError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Token validation error: ${error.message}`
+                    }).code(500)
+                }
             }
         }
     },
