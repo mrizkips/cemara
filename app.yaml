@@ -1,0 +1,11 @@
+runtime: nodejs16
+
+instance_class: F1
+
+env_variables:
+  GOOGLE_CLIENT_ID: "339240129870-fkefjuqt2uhbb3dj3j7ig9aaodeodj8g.apps.googleusercontent.com"
+  GOOGLE_MOBILE_CLIENT_ID: "339240129870-k6vbss5h715n6fuvjuk1jb6cjt741f4i.apps.googleusercontent.com"
+  GOOGLE_CLIENT_SECRET: "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"
+  AUTH_URL: "https://accounts.google.com/o/oauth2/auth"
+  TOKEN_URL: "https://oauth2.googleapis.com/token"
+  SCOPE: "https://www.googleapis.com/auth/calendar"
