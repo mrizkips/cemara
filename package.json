@@ -2,7 +2,7 @@
   "name": "cemara",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "./src/server.js",
   "scripts": {
     "start-dev": "nodemon -r dotenv/config ./src/server.js",
     "start": "NODE_ENV=production node -r dotenv/config ./src/server.js",
