@@ -47,7 +47,7 @@ const handler = {
             try {
                 const ticket = await client.verifyIdToken({
                     idToken,
-                    audience: process.env.GOOGLE_CLIENT_ID
+                    audience: process.env.GOOGLE_MOBILE_CLIENT_ID
                 }).catch((error) => {
                     console.log(error)
                     throw new TokenValidationError('ID Token tidak sesuai / ID token sudah kadaluarsa.')
