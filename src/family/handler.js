@@ -278,79 +278,79 @@ const handler = {
                     }
                 }
             }
-        },
-        token: {
-            auth: 'session',
-            pre: [
-                { method: initCalendarApi, assign: 'calendar' }
-            ],
-            validate: {
-                payload: Joi.object({
-                    token: Joi.string().min(8).max(8).required()
-                }),
-                failAction: (request, h, error) => {
-                    return error.isJoi ? h.response(error.output).takeover() : h.response(error).takeover()
-                }
-            },
-            handler: async (request, h) => {
-                const calendar = request.pre.calendar
-                const { userId } = request.auth.credentials
-                const { token } = request.payload
-                const db = getFirestore()
-
-                const familyRef = db.collection('families')
-                const snapshot = await familyRef.where('token', '==', token).get()
-
-                if (snapshot.empty) {
-                    return h.response({
-                        statusCode: 404,
-                        status: 'fail',
-                        message: 'Token tidak ditemukan.'
-                    }).code(404)
-                }
-
-                const userRef = db.collection('users').doc(userId)
-
-                try {
-                    snapshot.forEach(family => {
-                        userRef.update({
-                            familyId: family.id
-                        }).catch((error) => {
-                            console.log(error)
-                            throw new FirebaseError('gagal menambahkan familyId.')
-                        })
-
-                        calendar.acl.insert({
-                            calendarId: family.calendarId,
-                            sendNotifications: false,
-                            requestBody: {
-                                
-                            }
-                        })
-                    })
-                } catch (error) {
-                    if (error instanceof FirebaseError) {
-                        return h.response({
-                            statusCode: 500,
-                            status: 'fail',
-                            message: `Firebase Error: ${error.message}`
-                        }).code(500)
-                    } else if (error instanceof CalendarError) {
-                        return h.response({
-                            statusCode: 500,
-                            status: 'fail',
-                            message: `Google Calendar Error: ${error.message}`
-                        }).code(500)
-                    } else {
-                        return h.response({
-                            statusCode: 500,
-                            status: 'fail',
-                            message: error.message
-                        }).code(500)
-                    }
-                }
-            }
         }
+        // token: {
+        //     auth: 'session',
+        //     pre: [
+        //         { method: initCalendarApi, assign: 'calendar' }
+        //     ],
+        //     validate: {
+        //         payload: Joi.object({
+        //             token: Joi.string().min(8).max(8).required()
+        //         }),
+        //         failAction: (request, h, error) => {
+        //             return error.isJoi ? h.response(error.output).takeover() : h.response(error).takeover()
+        //         }
+        //     },
+        //     handler: async (request, h) => {
+        //         const calendar = request.pre.calendar
+        //         const { userId } = request.auth.credentials
+        //         const { token } = request.payload
+        //         const db = getFirestore()
+
+        //         const familyRef = db.collection('families')
+        //         const snapshot = await familyRef.where('token', '==', token).get()
+
+        //         if (snapshot.empty) {
+        //             return h.response({
+        //                 statusCode: 404,
+        //                 status: 'fail',
+        //                 message: 'Token tidak ditemukan.'
+        //             }).code(404)
+        //         }
+
+        //         const userRef = db.collection('users').doc(userId)
+
+        //         try {
+        //             snapshot.forEach(family => {
+        //                 userRef.update({
+        //                     familyId: family.id
+        //                 }).catch((error) => {
+        //                     console.log(error)
+        //                     throw new FirebaseError('gagal menambahkan familyId.')
+        //                 })
+
+        //                 calendar.acl.insert({
+        //                     calendarId: family.calendarId,
+        //                     sendNotifications: false,
+        //                     requestBody: {
+
+        //                     }
+        //                 })
+        //             })
+        //         } catch (error) {
+        //             if (error instanceof FirebaseError) {
+        //                 return h.response({
+        //                     statusCode: 500,
+        //                     status: 'fail',
+        //                     message: `Firebase Error: ${error.message}`
+        //                 }).code(500)
+        //             } else if (error instanceof CalendarError) {
+        //                 return h.response({
+        //                     statusCode: 500,
+        //                     status: 'fail',
+        //                     message: `Google Calendar Error: ${error.message}`
+        //                 }).code(500)
+        //             } else {
+        //                 return h.response({
+        //                     statusCode: 500,
+        //                     status: 'fail',
+        //                     message: error.message
+        //                 }).code(500)
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
