@@ -1,8 +1,7 @@
 const { google } = require('googleapis')
-const key = require('./../key.json')
 
 const generateToken = (length) => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     let result = ''
 
     for (let i = 0; i < length; i++) {
@@ -12,40 +11,51 @@ const generateToken = (length) => {
     return result
 }
 
-const initOAuth2 = (accessToken, refreshToken) => {
-    const oauth2Client = new google.auth.OAuth2(
-        key.web.client_id,
-        key.web.client_secret,
-        key.web.redirect_uris[0]
-    )
-
-    oauth2Client.setCredentials({
-        access_token: accessToken,
-        refresh_token: refreshToken
+const calendarClient = () => {
+    const googleAuth = new google.auth.GoogleAuth({
+        keyFile: __dirname + './../serviceAccount.json',
+        scopes: ['https://www.googleapis.com/auth/calendar']
     })
 
-    return oauth2Client
-}
-
-const initCalendarApi = (request, h) => {
-    const { accessToken, refreshToken } = request.auth.credentials
-    const oauth2Client = initOAuth2(accessToken, refreshToken)
     const calendar = google.calendar({
         version: 'v3',
-        auth: oauth2Client
+        auth: googleAuth
     })
 
     return calendar
 }
 
-const userInfo = (request, h) => {
-    const { accessToken, refreshToken } = request.auth.credentials
-    const oauth2Client = initOAuth2(accessToken, refreshToken)
-    const oauth2 = google.oauth2({
-        auth: oauth2Client,
-        version: 'v2'
+async function deleteCollection (db, collectionPath, batchSize) {
+    const collectionRef = db.collection(collectionPath)
+    const query = collectionRef.orderBy('__name__').limit(batchSize)
+
+    return new Promise((resolve, reject) => {
+        deleteQueryBatch(db, query, resolve).catch(reject)
     })
-    return oauth2.userinfo.get()
 }
 
-module.exports = { generateToken, initOAuth2, initCalendarApi, userInfo }
+async function deleteQueryBatch (db, query, resolve) {
+    const snapshot = await query.get()
+
+    const batchSize = snapshot.size
+    if (batchSize === 0) {
+        // When there are no documents left, we are done
+        resolve()
+        return
+    }
+
+    // Delete documents in a batch
+    const batch = db.batch()
+    snapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref)
+    })
+    await batch.commit()
+
+    // Recurse on the next process tick, to avoid
+    // exploding the stack.
+    process.nextTick(() => {
+        deleteQueryBatch(db, query, resolve)
+    })
+}
+
+module.exports = { generateToken, calendarClient, deleteCollection }

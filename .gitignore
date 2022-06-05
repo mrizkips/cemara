@@ -105,5 +105,6 @@ dist
 
 # Credentials
 key.json
+serviceAccount.json
 serviceAccountKey.json
 app.yaml

@@ -35,13 +35,11 @@ const handler = {
         },
         validate: {
             payload: Joi.object({
-                idToken: Joi.string().required(),
-                accessToken: Joi.string().required(),
-                refreshToken: Joi.string().required()
+                idToken: Joi.string().required()
             })
         },
         handler: async function (request, h) {
-            const { idToken, accessToken, refreshToken } = request.payload
+            const { idToken } = request.payload
             const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
             try {
@@ -65,20 +63,23 @@ const handler = {
                 if (!doc.exists) {
                     await userRef.set(data).then((res) => {
                         console.log('Added: ', res)
-                        request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
+                        request.cookieAuth.set({ idToken, userId: payload.sub })
                     }).catch((error) => {
                         console.log(error)
                         throw new FirebaseError('gagal menambahkan user.')
                     })
                 } else {
-                    request.cookieAuth.set({ idToken, accessToken, refreshToken, userId: payload.sub })
+                    request.cookieAuth.set({ idToken, userId: payload.sub })
                 }
 
                 const response = h.response({
                     statusCode: 200,
                     status: 'success',
                     message: 'Login berhasil.',
-                    data: request.auth.credentials
+                    data: {
+                        idToken,
+                        userId: payload.sub
+                    }
                 }).code(200)
 
                 return response

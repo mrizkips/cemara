@@ -15,11 +15,11 @@ const routes = [{
     path: '/family',
     options: handler.family.get
 },
-// {
-//     method: 'POST',
-//     path: '/family/token',
-//     options: handler.family.token
-// },
+{
+    method: 'POST',
+    path: '/family/token',
+    options: handler.family.token
+},
 {
     method: 'DELETE',
     path: '/family/{id}',
