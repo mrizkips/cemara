@@ -1,8 +1,8 @@
 exports.plugin = {
-    name: 'calendar',
+    name: 'event',
     version: '1.0.0',
     register: async (server, options) => {
-        await server.register(require('./../authentication'))
+        await server.register(require('../authentication'))
 
         server.route(require('./routes'))
         console.log('info', 'Plugin registered: google client plugin')

@@ -3,27 +3,27 @@ const handler = require('./handler')
 const routes = [{
     method: 'POST',
     path: '/family',
-    options: handler.family.insert
+    options: handler.insert
 },
 {
     method: 'PUT',
     path: '/family/{id}',
-    options: handler.family.update
+    options: handler.update
 },
 {
     method: 'GET',
     path: '/family',
-    options: handler.family.get
+    options: handler.get
 },
 {
     method: 'POST',
-    path: '/family/token',
-    options: handler.family.token
+    path: '/family/join',
+    options: handler.join
 },
 {
     method: 'DELETE',
     path: '/family/{id}',
-    options: handler.family.delete
+    options: handler.delete
 }]
 
 module.exports = routes
