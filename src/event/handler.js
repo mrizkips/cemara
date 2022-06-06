@@ -1,4 +1,4 @@
-const { getFirestore } = require('firebase-admin/firestore')
+const { getFirestore, Timestamp } = require('firebase-admin/firestore')
 const Joi = require('joi')
 const { nanoid } = require('nanoid')
 const { FirebaseError, CalendarError } = require('../errors')
@@ -89,6 +89,8 @@ const handler = {
             const calendar = request.pre.calendar
             const payload = request.payload
             const { userId } = request.auth.credentials
+            const start = new Date(payload.start)
+            const end = new Date(payload.end)
 
             const db = getFirestore()
 
@@ -114,6 +116,33 @@ const handler = {
                 }).code(404)
             }
 
+            const queryOne = await familyRef.collection('events')
+                .orderBy('start').startAt(start).endAt(new Date(end.getTime() - 1000)).get()
+
+            const queryTwo = await familyRef.collection('events')
+                .orderBy('end').startAt(new Date(start.getTime() + 1000)).endAt(end).get()
+
+            let busy = false
+            if (!queryOne.empty) {
+                queryOne.forEach((doc) => {
+                    busy = doc.data().assignFor === userId
+                })
+            }
+
+            if (!queryTwo.empty) {
+                queryTwo.forEach((doc) => {
+                    busy = doc.data().assignFor === userId
+                })
+            }
+
+            if (busy) {
+                return h.response({
+                    statusCode: 400,
+                    status: 'fail',
+                    message: 'Sudah ada jadwal.'
+                }).code(400)
+            }
+
             try {
                 const responsible = (await familyRef.collection('members').doc(payload.userId).get()).data()
 
@@ -121,10 +150,10 @@ const handler = {
                     calendarId: family.data().calendarId,
                     requestBody: {
                         start: {
-                            dateTime: new Date(payload.start).toISOString()
+                            dateTime: start.toISOString()
                         },
                         end: {
-                            dateTime: new Date(payload.end).toISOString()
+                            dateTime: end.toISOString()
                         },
                         summary: payload.summary,
                         description: `<strong>${responsible.name}</strong><p>${payload.description}</p>`
@@ -137,14 +166,18 @@ const handler = {
                 console.log(calendarRes.data)
 
                 const id = nanoid(16)
-                const eventRef = familyRef.collection('events').doc(id).set({
+                const data = {
                     creator: userId,
-                    start: new Date(payload.start).toISOString(),
-                    end: new Date(payload.end).toISOString(),
+                    start: Timestamp.fromDate(start),
+                    end: Timestamp.fromDate(end),
                     summary: payload.summary,
                     description: payload.description,
-                    assignFor: payload.userId
-                }).catch((error) => {
+                    assignFor: payload.userId,
+                    eventId: calendarRes.data.id
+                }
+
+                const eventRef = familyRef.collection('events').doc(id)
+                await eventRef.set(data).catch((error) => {
                     console.log(error)
                     throw new FirebaseError('gagal menambahkan event.')
                 })
@@ -153,8 +186,101 @@ const handler = {
                     statusCode: 201,
                     status: 'success',
                     message: 'Berhasil menambahkan event.',
-                    data: eventRef.data()
+                    data
                 }).code(201)
+            } catch (error) {
+                if (error instanceof FirebaseError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Firebase Error: ${error.message}`
+                    }).code(500)
+                } else if (error instanceof CalendarError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Google Calendar Error: ${error.message}`
+                    }).code(500)
+                } else {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: error.message
+                    }).code(500)
+                }
+            }
+        }
+    },
+    delete: {
+        auth: 'session',
+        pre: [
+            { method: calendarClient, assign: 'calendar' }
+        ],
+        handler: async (request, h) => {
+            const calendar = request.pre.calendar
+            const { id } = request.params
+            const { userId } = request.auth.credentials
+            const db = getFirestore()
+
+            const userRef = db.collection('users').doc(userId)
+            const user = (await userRef.get()).data()
+
+            const familyRef = db.collection('families').doc(user.familyId)
+            const family = await familyRef.get()
+
+            if (!family.exists) {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'Data keluarga tidak ditemukan.'
+                }).code(404)
+            }
+
+            const eventRef = familyRef.collection('events').doc(id)
+            const event = await eventRef.get()
+
+            if (!event.exists) {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'Data event tidak ditemukan.'
+                }).code(404)
+            }
+
+            const memberRef = familyRef.collection('members').doc(userId)
+            const member = await memberRef.get()
+
+            const isCreator = event.data().creator === userId
+            if (!isCreator) {
+                const isOwner = member.data().role === 'owner'
+                if (!isOwner) {
+                    return h.response({
+                        statusCode: 403,
+                        status: 'fail',
+                        message: 'Tidak memiliki otoritas untuk melakukan aksi ini.'
+                    }).code(403)
+                }
+            }
+
+            try {
+                await calendar.events.delete({
+                    calendarId: family.data().calendarId,
+                    eventId: event.data().eventId
+                }).catch((error) => {
+                    console.log(error)
+                    throw new CalendarError('gagal menghapus event.')
+                })
+
+                await eventRef.delete().catch((error) => {
+                    console.log(error)
+                    throw new FirebaseError('gagal menghapus event.')
+                })
+
+                return h.response({
+                    statusCode: 200,
+                    status: 'success',
+                    message: 'Data event berhasil dihapus.'
+                }).code(200)
             } catch (error) {
                 if (error instanceof FirebaseError) {
                     return h.response({

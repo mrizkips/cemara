@@ -69,7 +69,7 @@ const handler = {
                 await calendar.acl.insert({
                     calendarId: calendarRes.data.id,
                     requestBody: {
-                        role: 'freeBusyReader',
+                        role: 'reader',
                         scope: {
                             type: 'user',
                             value: user.email
@@ -140,7 +140,8 @@ const handler = {
             snapshot.forEach((doc) => {
                 members.push({
                     id: doc.id,
-                    role: doc.data().role
+                    role: doc.data().role,
+                    name: doc.data().name
                 })
             })
 
@@ -251,11 +252,6 @@ const handler = {
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
-        validate: {
-            params: Joi.object({
-                id: Joi.string().required()
-            })
-        },
         handler: async (request, h) => {
             const calendar = request.pre.calendar
             const { id } = request.params
@@ -265,8 +261,6 @@ const handler = {
             const familyRef = db.collection('families').doc(id)
             const family = await familyRef.get()
 
-            const userRef = db.collection('users').doc(userId)
-
             if (!family.exists) {
                 return h.response({
                     statusCode: 404,
@@ -275,8 +269,12 @@ const handler = {
                 }).code(404)
             }
 
+            const userRef = db.collection('users').doc(userId)
+
             const memberRef = familyRef.collection('members')
             const member = await memberRef.doc(userId).get()
+
+            const eventsRef = familyRef.collection('events')
 
             if (!member.exists || member.data().role !== 'owner') {
                 return h.response({
@@ -295,9 +293,15 @@ const handler = {
                 })
 
                 const members = []
-                const snapshot = await memberRef.get()
-                snapshot.docs.forEach((doc) => {
+                const memberSnapshot = await memberRef.get()
+                memberSnapshot.docs.forEach((doc) => {
                     members.push(doc.ref)
+                })
+
+                const events = []
+                const eventsSnapshot = await eventsRef.get()
+                eventsSnapshot.docs.forEach((doc) => {
+                    events.push(doc.ref)
                 })
 
                 await db.runTransaction(async (t) => {
@@ -308,14 +312,18 @@ const handler = {
                     members.forEach((ref) => {
                         t.delete(ref)
                     })
+                    events.forEach((ref) => {
+                        t.delete(ref)
+                    })
                 }).catch((error) => {
                     console.log(error)
                     throw new FirebaseError('gagal menghapus data keluarga.')
                 })
 
                 return h.response({
+                    statusCode: 200,
                     status: 'success',
-                    message: 'Data keluarga berhasil dihapus!'
+                    message: 'Data keluarga berhasil dihapus.'
                 }).code(200)
             } catch (error) {
                 if (error instanceof FirebaseError) {
@@ -399,7 +407,7 @@ const handler = {
                 await calendar.acl.insert({
                     calendarId: family.calendarId,
                     requestBody: {
-                        role: 'freeBusyReader',
+                        role: 'reader',
                         scope: {
                             type: 'user',
                             value: user.email
