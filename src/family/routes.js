@@ -22,6 +22,16 @@ const routes = [{
 },
 {
     method: 'DELETE',
+    path: '/family/{id}/leave',
+    options: handler.leave
+},
+{
+    method: 'PUT',
+    path: '/family/{id}/role',
+    options: handler.role
+},
+{
+    method: 'DELETE',
     path: '/family/{id}',
     options: handler.delete
 }]

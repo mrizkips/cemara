@@ -50,23 +50,7 @@ const handler = {
                 const familyRef = db.collection('families').doc(id)
                 const memberRef = familyRef.collection('members').doc(userId)
 
-                await db.runTransaction(async (t) => {
-                    t.set(familyRef, {
-                        name,
-                        calendarId: calendarRes.data.id
-                    })
-
-                    t.set(memberRef, {
-                        role: 'owner',
-                        name: user.name
-                    })
-
-                    t.update(userRef, {
-                        familyId: familyRef.id
-                    })
-                })
-
-                await calendar.acl.insert({
+                const aclRes = await calendar.acl.insert({
                     calendarId: calendarRes.data.id,
                     requestBody: {
                         role: 'reader',
@@ -78,6 +62,23 @@ const handler = {
                 }).catch((error) => {
                     console.log(error)
                     throw new CalendarError('gagal menambahkan role ke calendar.')
+                })
+
+                await db.runTransaction(async (t) => {
+                    t.set(familyRef, {
+                        name,
+                        calendarId: calendarRes.data.id
+                    })
+
+                    t.set(memberRef, {
+                        role: 'owner',
+                        name: user.name,
+                        aclId: aclRes.data.id
+                    })
+
+                    t.update(userRef, {
+                        familyId: familyRef.id
+                    })
                 })
 
                 return h.response({
@@ -140,20 +141,19 @@ const handler = {
             snapshot.forEach((doc) => {
                 members.push({
                     id: doc.id,
-                    role: doc.data().role,
-                    name: doc.data().name
+                    body: doc.data()
                 })
             })
-
-            const data = family.data()
-            data.id = family.id
-            data.members = members
 
             return h.response({
                 statusCode: 200,
                 status: 'success',
                 message: 'Data keluarga ditemukan.',
-                data
+                data: {
+                    id: family.id,
+                    body: family.data(),
+                    members
+                }
             })
         }
     },
@@ -176,6 +176,17 @@ const handler = {
             const { userId } = request.auth.credentials
             const { id } = request.params
             const db = getFirestore()
+
+            const userRef = db.collection('users').doc(userId)
+            const user = await userRef.get()
+
+            if (typeof user.data().familyId === 'undefined') {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'User tidak memiliki data keluarga.'
+                }).code(404)
+            }
 
             const familyRef = db.collection('families').doc(id)
             const family = await familyRef.get()
@@ -374,7 +385,7 @@ const handler = {
                 return h.response({
                     statusCode: 404,
                     status: 'fail',
-                    message: 'Token tidak ditemukan.'
+                    message: 'Id keluarga tidak ditemukan.'
                 }).code(404)
             }
 
@@ -393,19 +404,8 @@ const handler = {
             const user = (await userRef.get()).data()
 
             try {
-                await memberRef.set({
-                    role: 'editor'
-                })
-
-                await userRef.update({
-                    familyId: family.id
-                }).catch((error) => {
-                    console.log(error)
-                    throw new FirebaseError('gagal menambahkan familyId.')
-                })
-
-                await calendar.acl.insert({
-                    calendarId: family.calendarId,
+                const calendarRes = await calendar.acl.insert({
+                    calendarId: family.data().calendarId,
                     requestBody: {
                         role: 'reader',
                         scope: {
@@ -418,10 +418,28 @@ const handler = {
                     throw new CalendarError('gagal menambahkan acl calendar.')
                 })
 
+                await db.runTransaction(async (t) => {
+                    t.set(memberRef, {
+                        role: 'editor',
+                        name: user.name,
+                        aclId: calendarRes.data.id
+                    })
+
+                    t.update(userRef, {
+                        familyId: family.id
+                    })
+                }).catch((error) => {
+                    console.log(error)
+                    throw new FirebaseError('gagal menambahkan member.')
+                })
+
                 return h.response({
                     statusCode: 200,
                     status: 'success',
-                    message: 'User berhasil ditambahkan ke dalam keluarga.'
+                    message: 'User berhasil ditambahkan ke dalam keluarga.',
+                    data: {
+                        id: memberRef.id
+                    }
                 }).code(200)
             } catch (error) {
                 if (error instanceof FirebaseError) {
@@ -435,6 +453,191 @@ const handler = {
                         statusCode: 500,
                         status: 'fail',
                         message: `Google Calendar Error: ${error.message}`
+                    }).code(500)
+                } else {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: error.message
+                    }).code(500)
+                }
+            }
+        }
+    },
+    leave: {
+        auth: 'session',
+        pre: [
+            { method: calendarClient, assign: 'calendar' }
+        ],
+        handler: async (request, h) => {
+            const calendar = request.pre.calendar
+            const { userId } = request.auth.credentials
+            const { id } = request.params
+            const db = getFirestore()
+
+            const familyRef = db.collection('families').doc(id)
+            const family = await familyRef.get()
+
+            if (!family.exists) {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'Data keluarga tidak ditemukan.'
+                }).code(404)
+            }
+
+            const userRef = db.collection('users').doc(userId)
+            const user = await userRef.get()
+
+            if (user.data().familyId !== family.id) {
+                return h.response({
+                    statusCode: 400,
+                    status: 'fail',
+                    message: 'Data keluarga user tidak sama dengan id.'
+                }).code(400)
+            }
+
+            const memberRef = familyRef.collection('members').doc(userId)
+            const member = await memberRef.get()
+
+            if (member.data().role === 'owner') {
+                const ownerQuery = await familyRef.collection('members').where('role', '==', 'owner').get()
+                if (ownerQuery.docs.length <= 1) {
+                    return h.response({
+                        statusCode: 400,
+                        status: 'fail',
+                        message: 'Tetapkan role owner pada member lain terlebih dahulu.'
+                    }).code(400)
+                }
+            }
+
+            try {
+                await calendar.acl.delete({
+                    calendarId: family.data().calendarId,
+                    ruleId: member.data().aclId
+                }).catch((error) => {
+                    console.log(error)
+                    throw new CalendarError('gagal menghapus acl.')
+                })
+
+                await memberRef.delete().catch((error) => {
+                    console.log(error)
+                    throw new FirebaseError('gagal menghapus member.')
+                })
+
+                return h.response({
+                    statusCode: 200,
+                    status: 'success',
+                    message: 'User berhasil meninggalkan grup keluarga.'
+                }).code(200)
+            } catch (error) {
+                if (error instanceof FirebaseError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Firebase Error: ${error.message}`
+                    }).code(500)
+                } else if (error instanceof CalendarError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Google Calendar Error: ${error.message}`
+                    }).code(500)
+                } else {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: error.message
+                    }).code(500)
+                }
+            }
+        }
+    },
+    role: {
+        auth: 'session',
+        validate: {
+            payload: Joi.object({
+                userId: Joi.string().required(),
+                role: Joi.string().valid('editor', 'owner').required()
+            }),
+            failAction: (request, h, error) => {
+                return error.isJoi ? h.response(error.output).takeover() : h.response(error).takeover()
+            }
+        },
+        handler: async (request, h) => {
+            const { userId } = request.auth.credentials
+            const payload = request.payload
+            const db = getFirestore()
+
+            const userRef = db.collection('users').doc(userId)
+            const user = await userRef.get()
+
+            if (typeof user.data().familyId === 'undefined') {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'User tidak memiliki data keluarga.'
+                }).code(404)
+            }
+
+            const familyRef = db.collection('families').doc(user.data().familyId)
+            const family = await familyRef.get()
+
+            if (!family.exists) {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'Data keluarga tidak ditemukan.'
+                }).code(404)
+            }
+
+            const memberRef = familyRef.collection('members').doc(userId)
+            const member = await memberRef.get()
+
+            if (!member.exists || member.data().role !== 'owner') {
+                return h.response({
+                    statusCode: 403,
+                    status: 'fail',
+                    message: 'Tidak memiliki otoritas untuk melakukan aksi ini.'
+                }).code(403)
+            }
+
+            if (userId === payload.userId) {
+                const ownerQuery = familyRef.collection('members').where('role', '==', 'owner')
+                const snapshot = await ownerQuery.get()
+                if (snapshot.docs.length <= 1) {
+                    return h.response({
+                        statusCode: 400,
+                        status: 'fail',
+                        message: 'Tetapkan role owner pada member lain terlebih dahulu.'
+                    }).code(400)
+                }
+            }
+
+            try {
+                const updateMember = familyRef.collection('members').doc(payload.userId)
+                await updateMember.update({
+                    role: payload.role
+                }).catch((error) => {
+                    console.log(error)
+                    throw new FirebaseError('gagal mengubah role.')
+                })
+
+                return h.response({
+                    statusCode: 200,
+                    status: 'success',
+                    message: 'Berhasil mengubah role.',
+                    data: {
+                        id: updateMember.id,
+                        role: payload.role
+                    }
+                }).code(200)
+            } catch (error) {
+                if (error instanceof FirebaseError) {
+                    return h.response({
+                        statusCode: 500,
+                        status: 'fail',
+                        message: `Firebase Error: ${error.message}`
                     }).code(500)
                 } else {
                     return h.response({

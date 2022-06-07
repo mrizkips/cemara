@@ -55,16 +55,16 @@ const handler = {
                 })
             })
 
-            const data = family.data()
-            data.id = family.id
-            data.members = members
-            data.events = events
-
             return h.response({
                 statusCode: 200,
                 status: 'success',
                 message: 'Berhasil mengambil data event.',
-                data
+                data: {
+                    id: family.id,
+                    body: family.data(),
+                    members,
+                    events
+                }
             })
         }
     },
@@ -224,6 +224,14 @@ const handler = {
 
             const userRef = db.collection('users').doc(userId)
             const user = (await userRef.get()).data()
+
+            if (typeof user.familyId === 'undefined') {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'User tidak memiliki data keluarga.'
+                }).code(404)
+            }
 
             const familyRef = db.collection('families').doc(user.familyId)
             const family = await familyRef.get()
