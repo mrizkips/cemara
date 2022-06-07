@@ -280,12 +280,8 @@ const handler = {
                 }).code(404)
             }
 
-            const userRef = db.collection('users').doc(userId)
-
             const memberRef = familyRef.collection('members')
             const member = await memberRef.doc(userId).get()
-
-            const eventsRef = familyRef.collection('events')
 
             if (!member.exists || member.data().role !== 'owner') {
                 return h.response({
@@ -294,6 +290,9 @@ const handler = {
                     message: 'Tidak memiliki otoritas untuk melakukan aksi ini.'
                 }).code(403)
             }
+
+            const userRef = db.collection('users').doc(userId)
+            const eventsRef = familyRef.collection('events')
 
             try {
                 await calendar.calendars.delete({

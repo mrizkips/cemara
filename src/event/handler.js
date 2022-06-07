@@ -38,9 +38,13 @@ const handler = {
             const events = []
 
             eventSnapshot.forEach((doc) => {
+                const data = doc.data()
+                data.start = data.start.toDate()
+                data.end = data.end.toDate()
+
                 events.push({
                     id: doc.id,
-                    body: doc.data()
+                    body: data
                 })
             })
 
@@ -51,7 +55,7 @@ const handler = {
             memberSnapshot.forEach((doc) => {
                 members.push({
                     id: doc.id,
-                    role: doc.data().role
+                    body: doc.data()
                 })
             })
 
