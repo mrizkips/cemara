@@ -26,7 +26,7 @@ exports.plugin = {
         server.auth.strategy('google', 'bell', {
             password: 'Bf038lxIwQ4ODJgOnrlAm2345AM9ifDy',
             provider: 'google',
-            location: server.info.uri,
+            location: process.env.NODE_ENV === 'production' ? process.env.PROD_HOST : server.info.uri,
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             providerParams: {
