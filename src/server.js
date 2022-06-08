@@ -32,7 +32,8 @@ const init = async () => {
 
     await server.register([
         { plugin: require('./family') },
-        { plugin: require('./event') }
+        { plugin: require('./event') },
+        { plugin: require('./profile') }
     ])
     server.route(routes)
 

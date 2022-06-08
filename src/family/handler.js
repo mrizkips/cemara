@@ -380,7 +380,7 @@ const handler = {
             const familyRef = db.collection('families').doc(id)
             const family = await familyRef.get()
 
-            if (family.empty) {
+            if (!family.exists) {
                 return h.response({
                     statusCode: 404,
                     status: 'fail',
@@ -565,6 +565,7 @@ const handler = {
         },
         handler: async (request, h) => {
             const { userId } = request.auth.credentials
+            const { id } = request.params
             const payload = request.payload
             const db = getFirestore()
 
@@ -579,7 +580,7 @@ const handler = {
                 }).code(404)
             }
 
-            const familyRef = db.collection('families').doc(user.data().familyId)
+            const familyRef = db.collection('families').doc(id)
             const family = await familyRef.get()
 
             if (!family.exists) {
