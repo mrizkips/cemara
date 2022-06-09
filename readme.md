@@ -3,11 +3,17 @@
 ## Clone repository
 
 ```git
-git clone https://github.com/mrizkips/cemara.git
+git clone https://github.com/mrizkips/haepe-api.git
 ```
 
 ## Install nodejs package
 
-```node
+```npm
 npm install
+```
+
+## Run the project
+
+```npm
+npm run start-dev
 ```

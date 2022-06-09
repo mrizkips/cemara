@@ -13,7 +13,6 @@
   "license": "ISC",
   "dependencies": {
     "@hapi/bell": "^12.3.0",
-    "@hapi/cookie": "^11.0.2",
     "@hapi/crumb": "^8.0.1",
     "@hapi/hapi": "^20.2.2",
     "@hapi/jwt": "^2.1.1",
