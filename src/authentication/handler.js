@@ -79,7 +79,7 @@ const handler = {
                         algorithm: 'HS512'
                     },
                     {
-                        ttlSec: 60 * 60 * 24
+                        ttlSec: 60 * 60 * 24 * 7
                     }
                 )
 
