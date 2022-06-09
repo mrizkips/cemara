@@ -6,7 +6,7 @@ const Joi = require('joi')
 
 const handler = {
     insert: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -19,7 +19,7 @@ const handler = {
             }
         },
         handler: async (request, h) => {
-            const calendar = request.pre.calendar
+            const { calendar } = request.pre.calendar
             const { name } = request.payload
             const { userId } = request.auth.credentials
 
@@ -107,7 +107,7 @@ const handler = {
         }
     },
     get: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         handler: async (request, h) => {
             const { userId } = request.auth.credentials
             const db = getFirestore()
@@ -158,7 +158,7 @@ const handler = {
         }
     },
     update: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -259,7 +259,7 @@ const handler = {
         }
     },
     delete: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -359,7 +359,7 @@ const handler = {
         }
     },
     join: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -464,7 +464,7 @@ const handler = {
         }
     },
     leave: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -553,7 +553,7 @@ const handler = {
         }
     },
     role: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         validate: {
             payload: Joi.object({
                 userId: Joi.string().required(),

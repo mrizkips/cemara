@@ -7,11 +7,6 @@ const routes = [{
 },
 {
     method: 'GET',
-    path: '/auth/logout',
-    options: handler.logout
-},
-{
-    method: 'GET',
     path: '/auth/google',
     options: handler.google
 }]

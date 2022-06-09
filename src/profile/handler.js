@@ -24,7 +24,7 @@ const skillsList = [
 
 const handler = {
     get: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         handler: async (request, h) => {
             const { userId } = request.auth.credentials
             const db = getFirestore()
@@ -50,13 +50,15 @@ const handler = {
                 message: 'Berhasil mengambil data event.',
                 data: {
                     id: user.id,
-                    body: data
+                    body: data,
+                    interestsList,
+                    skillsList
                 }
             })
         }
     },
     update: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         validate: {
             payload: Joi.object({
                 name: Joi.string().required(),

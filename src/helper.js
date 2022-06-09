@@ -1,4 +1,5 @@
 const { google } = require('googleapis')
+const Jwt = require('@hapi/jwt')
 
 const generateToken = (length) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'

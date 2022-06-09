@@ -3,23 +3,23 @@ exports.plugin = {
     version: '1.0.0',
     once: true,
     register: async (server, options) => {
-        await server.register(require('@hapi/cookie'))
         await server.register(require('@hapi/bell'))
+        await server.register(require('@hapi/jwt'))
 
-        server.auth.strategy('session', 'cookie', {
-            cookie: {
-                password: '4bfsAhccZeb146bE63bcAOUFGcuzLBix',
-                isSecure: process.env.NODE_ENV === 'production',
-                path: '/'
+        server.auth.strategy('jwt_strategy', 'jwt', {
+            keys: process.env.JWT_SECRET,
+            verify: {
+                aud: process.env.GOOGLE_CLIENT_ID,
+                iss: process.env.GOOGLE_CLIENT_ID,
+                sub: false,
+                nbf: true,
+                exp: true
             },
-            validateFunc: async (request, session) => {
-                const account = session
-
-                if (!account) {
-                    return { valid: false }
+            validate: (artifacts, request, h) => {
+                return {
+                    isValid: true,
+                    credentials: { userId: artifacts.decoded.payload.sub }
                 }
-
-                return { valid: true, credentials: account }
             }
         })
 

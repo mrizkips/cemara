@@ -2,6 +2,7 @@ const { OAuth2Client } = require('google-auth-library')
 const { getFirestore } = require('firebase-admin/firestore')
 const Joi = require('joi')
 const { TokenValidationError, FirebaseError } = require('../errors')
+const Jwt = require('@hapi/jwt')
 
 const handler = {
     google: {
@@ -29,10 +30,6 @@ const handler = {
         }
     },
     login: {
-        auth: {
-            mode: 'try',
-            strategy: 'session'
-        },
         validate: {
             payload: Joi.object({
                 idToken: Joi.string().required()
@@ -63,22 +60,35 @@ const handler = {
                 if (!doc.exists) {
                     await userRef.set(data).then((res) => {
                         console.log('Added: ', res)
-                        request.cookieAuth.set({ idToken, userId: payload.sub })
                     }).catch((error) => {
                         console.log(error)
                         throw new FirebaseError('gagal menambahkan user.')
                     })
-                } else {
-                    request.cookieAuth.set({ idToken, userId: payload.sub })
                 }
+
+                const token = Jwt.token.generate(
+                    {
+                        aud: process.env.GOOGLE_CLIENT_ID,
+                        iss: process.env.GOOGLE_CLIENT_ID,
+                        sub: payload.sub,
+                        email: payload.email,
+                        name: payload.name
+                    },
+                    {
+                        key: process.env.JWT_SECRET,
+                        algorithm: 'HS512'
+                    },
+                    {
+                        ttlSec: 60 * 60 * 24
+                    }
+                )
 
                 const response = h.response({
                     statusCode: 200,
                     status: 'success',
                     message: 'Login berhasil.',
                     data: {
-                        idToken,
-                        userId: payload.sub
+                        idToken: token
                     }
                 }).code(200)
 
@@ -98,19 +108,6 @@ const handler = {
                     }).code(500)
                 }
             }
-        }
-    },
-    logout: {
-        auth: 'session',
-        handler: async (request, h) => {
-            request.cookieAuth.clear()
-
-            const response = h.response({
-                statusCode: 200,
-                status: 'success',
-                message: 'Berhasil logout'
-            }).code(200)
-            return response
         }
     }
 }

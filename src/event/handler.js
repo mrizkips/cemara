@@ -6,7 +6,7 @@ const { calendarClient } = require('../helper')
 
 const handler = {
     get: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         handler: async (request, h) => {
             const { userId } = request.auth.credentials
             const db = getFirestore()
@@ -95,7 +95,7 @@ const handler = {
         }
     },
     insert: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -238,7 +238,7 @@ const handler = {
         }
     },
     update: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -391,7 +391,7 @@ const handler = {
         }
     },
     delete: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
@@ -492,7 +492,7 @@ const handler = {
         }
     },
     done: {
-        auth: 'session',
+        auth: 'jwt_strategy',
         pre: [
             { method: calendarClient, assign: 'calendar' }
         ],
