@@ -25,9 +25,9 @@ const handler = {
 
             const db = getFirestore()
             const userRef = db.collection('users').doc(userId)
-            const user = (await userRef.get()).data()
+            const user = await userRef.get()
 
-            if (user.familyId) {
+            if (typeof user.data().familyId !== 'undefined') {
                 return h.response({
                     statusCode: 400,
                     status: 'fail',
@@ -46,23 +46,23 @@ const handler = {
                     throw new CalendarError('gagal menambahkan data.')
                 })
 
-                const id = nanoid(16)
-                const familyRef = db.collection('families').doc(id)
-                const memberRef = familyRef.collection('members').doc(userId)
-
                 const aclRes = await calendar.acl.insert({
                     calendarId: calendarRes.data.id,
                     requestBody: {
                         role: 'reader',
                         scope: {
                             type: 'user',
-                            value: user.email
+                            value: user.data().email
                         }
                     }
                 }).catch((error) => {
                     console.log(error)
                     throw new CalendarError('gagal menambahkan role ke calendar.')
                 })
+
+                const id = nanoid(16)
+                const familyRef = db.collection('families').doc(id)
+                const memberRef = familyRef.collection('members').doc(userId)
 
                 await db.runTransaction(async (t) => {
                     t.set(familyRef, {
@@ -72,7 +72,7 @@ const handler = {
 
                     t.set(memberRef, {
                         role: 'owner',
-                        name: user.name,
+                        name: user.data().name,
                         aclId: aclRes.data.id
                     })
 
