@@ -19,7 +19,7 @@ const handler = {
             }
         },
         handler: async (request, h) => {
-            const { calendar } = request.pre.calendar
+            const { calendar } = request.pre
             const { name } = request.payload
             const { userId } = request.auth.credentials
 

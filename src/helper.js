@@ -1,5 +1,5 @@
 const { google } = require('googleapis')
-const Jwt = require('@hapi/jwt')
+const path = require('path')
 
 const generateToken = (length) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -14,7 +14,7 @@ const generateToken = (length) => {
 
 const calendarClient = () => {
     const googleAuth = new google.auth.GoogleAuth({
-        keyFile: __dirname + './../serviceAccount.json',
+        keyFile: path.join(__dirname, '/../serviceAccount.json'),
         scopes: ['https://www.googleapis.com/auth/calendar']
     })
 
