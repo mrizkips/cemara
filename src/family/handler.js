@@ -291,7 +291,7 @@ const handler = {
                 }).code(403)
             }
 
-            const userRef = db.collection('users').doc(userId)
+            const userRef = db.collection('users').where('familyId', '==', id)
             const eventsRef = familyRef.collection('events')
 
             try {
@@ -314,6 +314,13 @@ const handler = {
                     events.push(doc.ref)
                 })
 
+                const userSnapshot = await userRef.get()
+                const users = []
+
+                userSnapshot.forEach((user) => {
+                    users.push(user.ref)
+                })
+
                 await db.runTransaction(async (t) => {
                     t.delete(familyRef)
                     t.update(userRef, {
@@ -323,6 +330,9 @@ const handler = {
                         t.delete(ref)
                     })
                     events.forEach((ref) => {
+                        t.delete(ref)
+                    })
+                    users.forEach((ref) => {
                         t.delete(ref)
                     })
                 }).catch((error) => {

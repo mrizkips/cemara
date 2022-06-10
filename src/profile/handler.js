@@ -41,8 +41,10 @@ const handler = {
             }
 
             const data = user.data()
-            data.birthday = data.birthday.toDate()
-            data.age = new Date().getFullYear() - new Date(data.birthday).getFullYear()
+            if (typeof data.birthday !== 'undefined') {
+                data.birthday = data.birthday.toDate()
+                data.age = new Date().getFullYear() - new Date(data.birthday).getFullYear()
+            }
 
             return h.response({
                 statusCode: 200,
