@@ -519,7 +519,12 @@ const handler = {
                     throw new CalendarError('gagal menghapus acl.')
                 })
 
-                await memberRef.delete().catch((error) => {
+                await db.runTransaction(async (t) => {
+                    t.delete(memberRef)
+                    t.update(userRef, {
+                        familyId: FieldValue.delete()
+                    })
+                }).catch((error) => {
                     console.log(error)
                     throw new FirebaseError('gagal menghapus member.')
                 })
