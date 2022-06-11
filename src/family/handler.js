@@ -295,13 +295,6 @@ const handler = {
             const eventsRef = familyRef.collection('events')
 
             try {
-                await calendar.calendars.delete({
-                    calendarId: family.data().calendarId
-                }).catch((error) => {
-                    console.log(error)
-                    throw new CalendarError('gagal menghapus data.')
-                })
-
                 const members = []
                 const memberSnapshot = await memberRef.get()
                 memberSnapshot.docs.forEach((doc) => {
@@ -322,10 +315,6 @@ const handler = {
                 })
 
                 await db.runTransaction(async (t) => {
-                    t.delete(familyRef)
-                    t.update(userRef, {
-                        familyId: FieldValue.delete()
-                    })
                     members.forEach((ref) => {
                         t.delete(ref)
                     })
@@ -333,11 +322,21 @@ const handler = {
                         t.delete(ref)
                     })
                     users.forEach((ref) => {
-                        t.delete(ref)
+                        t.update(userRef, {
+                            familyId: FieldValue.delete()
+                        })
                     })
+                    t.delete(familyRef)
                 }).catch((error) => {
                     console.log(error)
                     throw new FirebaseError('gagal menghapus data keluarga.')
+                })
+
+                await calendar.calendars.delete({
+                    calendarId: family.data().calendarId
+                }).catch((error) => {
+                    console.log(error)
+                    throw new CalendarError('gagal menghapus data.')
                 })
 
                 return h.response({
