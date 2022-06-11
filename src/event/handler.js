@@ -298,6 +298,21 @@ const handler = {
                 }).code(404)
             }
 
+            const memberRef = familyRef.collection('members').doc(userId)
+            const member = await memberRef.get()
+
+            const isCreator = events.data().creator === userId
+            if (!isCreator) {
+                const isOwner = member.data().role === 'owner'
+                if (!isOwner) {
+                    return h.response({
+                        statusCode: 403,
+                        status: 'fail',
+                        message: 'Tidak memiliki otoritas untuk melakukan aksi ini.'
+                    }).code(403)
+                }
+            }
+
             const queryOne = await familyRef.collection('events')
                 .orderBy('start').startAt(start).endAt(new Date(end.getTime() - 1000)).get()
 
