@@ -307,8 +307,8 @@ const handler = {
                     events.push(doc.ref)
                 })
 
-                const userSnapshot = await userRef.get()
                 const users = []
+                const userSnapshot = await userRef.get()
 
                 userSnapshot.forEach((user) => {
                     users.push(user.ref)
@@ -322,7 +322,7 @@ const handler = {
                         t.delete(ref)
                     })
                     users.forEach((ref) => {
-                        t.update(userRef, {
+                        t.update(ref, {
                             familyId: FieldValue.delete()
                         })
                     })
