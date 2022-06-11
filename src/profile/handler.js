@@ -10,7 +10,10 @@ const interestsList = [
     'Teknologi',
     'Edukasi',
     'Keuangan',
-    'Binatang'
+    'Binatang',
+    'Animasi',
+    'Kesehatan',
+    'Literatur'
 ]
 const skillsList = [
     'Masak',
