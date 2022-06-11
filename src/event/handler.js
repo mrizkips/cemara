@@ -210,7 +210,10 @@ const handler = {
                     statusCode: 201,
                     status: 'success',
                     message: 'Berhasil menambahkan event.',
-                    data
+                    data: {
+                        id,
+                        body: data
+                    }
                 }).code(201)
             } catch (error) {
                 if (error instanceof FirebaseError) {
