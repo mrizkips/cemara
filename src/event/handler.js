@@ -298,6 +298,14 @@ const handler = {
                 }).code(404)
             }
 
+            if (events.data().done) {
+                return h.response({
+                    statusCode: 400,
+                    status: 'fail',
+                    message: 'Event sudah selesai.'
+                }).code(400)
+            }
+
             const memberRef = familyRef.collection('members').doc(userId)
             const member = await memberRef.get()
 
@@ -570,8 +578,6 @@ const handler = {
                     message: 'Event ini tidak ditugaskan kepada Anda.'
                 }).code(403)
             }
-
-            console.log(assignFor)
 
             try {
                 await calendar.events.delete({
