@@ -151,13 +151,13 @@ const handler = {
             let busy = false
             if (!queryOne.empty) {
                 queryOne.forEach((doc) => {
-                    busy = doc.data().assignFor === userId
+                    busy = doc.data().assignFor === payload.userId
                 })
             }
 
             if (!queryTwo.empty) {
                 queryTwo.forEach((doc) => {
-                    busy = doc.data().assignFor === userId
+                    busy = doc.data().assignFor === payload.userId
                 })
             }
 
