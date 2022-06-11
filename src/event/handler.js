@@ -153,9 +153,7 @@ const handler = {
                 queryOne.forEach((doc) => {
                     busy = doc.data().assignFor === payload.userId
                 })
-            }
-
-            if (!queryTwo.empty) {
+            } else if (!queryTwo.empty) {
                 queryTwo.forEach((doc) => {
                     busy = doc.data().assignFor === payload.userId
                 })
