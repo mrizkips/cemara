@@ -477,13 +477,15 @@ const handler = {
             }
 
             try {
-                await calendar.events.delete({
-                    calendarId: family.data().calendarId,
-                    eventId: event.data().eventId
-                }).catch((error) => {
-                    console.log(error)
-                    throw new CalendarError('gagal menghapus event.')
-                })
+                if (!event.data().done) {
+                    await calendar.events.delete({
+                        calendarId: family.data().calendarId,
+                        eventId: event.data().eventId
+                    }).catch((error) => {
+                        console.log(error)
+                        throw new CalendarError('gagal menghapus event.')
+                    })
+                }
 
                 await eventRef.delete().catch((error) => {
                     console.log(error)
