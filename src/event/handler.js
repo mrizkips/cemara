@@ -142,6 +142,17 @@ const handler = {
                 }).code(404)
             }
 
+            const memberRef = familyRef.collection('members').doc(payload.userId)
+            const member = await memberRef.get()
+
+            if (!member.exists) {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'User id yang dimasukkan tidak terdaftar dalam keluarga anda.'
+                }).code(404)
+            }
+
             const queryOne = await familyRef.collection('events')
                 .orderBy('start').startAt(start).endAt(new Date(end.getTime() - 1000)).get()
 
@@ -168,7 +179,7 @@ const handler = {
             }
 
             try {
-                const responsible = (await familyRef.collection('members').doc(payload.userId).get()).data()
+                const responsible = member.data()
 
                 const calendarRes = await calendar.events.insert({
                     calendarId: family.data().calendarId,
@@ -321,6 +332,17 @@ const handler = {
                 }
             }
 
+            const responsibleRef = familyRef.collection('members').doc(payload.userId)
+            const responsibleSnapshot = await responsibleRef.get()
+
+            if (!responsibleSnapshot.exists) {
+                return h.response({
+                    statusCode: 404,
+                    status: 'fail',
+                    message: 'User id yang dimasukkan tidak terdaftar dalam keluarga anda.'
+                }).code(404)
+            }
+
             const queryOne = await familyRef.collection('events')
                 .orderBy('start').startAt(start).endAt(new Date(end.getTime() - 1000)).get()
 
@@ -349,7 +371,7 @@ const handler = {
             }
 
             try {
-                const responsible = (await familyRef.collection('members').doc(payload.userId).get()).data()
+                const responsible = responsibleSnapshot.data()
 
                 const calendarRes = await calendar.events.update({
                     calendarId: family.data().calendarId,
