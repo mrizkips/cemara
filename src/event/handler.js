@@ -61,9 +61,11 @@ const handler = {
 
             for (const member of members) {
                 const user = (await db.collection('users').doc(member.id).get()).data()
-                user.birthday = user.birthday.toDate()
-                user.age = new Date().getFullYear() - new Date(user.birthday).getFullYear()
-                member.profile = user
+                if (typeof user.birthday !== 'undefined') {
+                    user.birthday = user.birthday.toDate()
+                    user.age = new Date().getFullYear() - new Date(user.birthday).getFullYear()
+                    member.profile = user
+                }
             }
 
             for (const event of events) {
